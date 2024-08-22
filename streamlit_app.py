@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 import json
 
-def call_api(user_input):
+def call_api(system_prompt, user_input):
     url = "https://beta-llm-chainer.io.naver.com/v2/chain-completions"
     
     headers = {
@@ -19,19 +19,27 @@ def call_api(user_input):
         },
         "prompts": {
             "systemPrompt": {
-                "prompt": "- 보고서 목차를 작성한다.\r\n- 서론, 본론, 결론으로 나누어 체계적으로 목차를 작성한다.\r\n- 각 항목의 예제 문장을 함께 출력한다."
+                "prompt": system_prompt
             }
         }
     }
     
-    response = requests.post(url, headers=headers, data=json.dumps(data))
-    return response.json()
+    try:
+        response = requests.post(url, headers=headers, json=data)
+        response.raise_for_status()  # Raises an HTTPError for bad responses
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        return {"error": str(e)}
 
 # Streamlit 앱
-st.title("보고서 목차 생성기")
+st.title("API 요청 생성기")
 
-user_input = st.text_input("보고서 주제를 입력하세요:", "탄소 중립을 위한 노력")
+system_prompt = st.text_area("System Prompt를 입력하세요:", 
+                             "- 보고서 목차를 작성한다.\n- 서론, 본론, 결론으로 나누어 체계적으로 목차를 작성한다.\n- 각 항목의 예제 문장을 함께 출력한다.",
+                             height=150)
 
-if st.button("목차 생성"):
-    result = call_api(user_input)
-    st.write(result)
+user_input = st.text_input("User Input을 입력하세요:", "보고서 주제: 탄소 중립을 위한 노력")
+
+if st.button("API 호출"):
+    result = call_api(system_prompt, user_input)
+    st.json(result)  # JSON 형식으로 결과 표시
